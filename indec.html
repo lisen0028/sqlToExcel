@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>SQL 转 Excel 工具</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    label {
+      font-weight: bold;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    .sql-block {
+      background: #f0f2f5;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    button {
+      padding: 10px 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .btn-delete {
+      background: #dc3545;
+      margin-top: 10px;
+    }
+    .btn-delete:hover {
+      background: #a71d2a;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>SQL 查询结果导出为 Excel</h2>
+    <form id="exportForm">
+      <label>数据库地址：</label>
+      <input type="text" name="host" placeholder="如：127.0.0.1:3306" required />
+      <label>数据库名：</label>
+      <input type="text" name="database" required />
+      <label>用户名：</label>
+      <input type="text" name="user" required />
+      <label>密码：</label>
+      <input type="password" name="password" required />
+
+      <div id="sqlContainer"></div>
+
+      <button type="button" onclick="addSqlBlock()">➕ 添加 SQL</button>
+      <button type="submit" style="margin-top: 16px;">🚀 开始导出</button>
+    </form>
+  </div>
+
+  <script>
+    function addSqlBlock(sql = '', sheet = '') {
+      const div = document.createElement('div');
+      div.className = 'sql-block';
+      div.innerHTML = `
+        <label>Sheet 名：</label>
+        <input type="text" name="sheetNames[]" value="${sheet}" required />
+        <label>SQL 语句：</label>
+        <textarea name="sqls[]" rows="5" required>${sql}</textarea>
+        <button type="button" class="btn-delete" onclick="this.parentElement.remove()">🗑 删除</button>
+      `;
+      document.getElementById('sqlContainer').appendChild(div);
+    }
+
+    document.getElementById('exportForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const json = {};
+      formData.forEach((v, k) => {
+        if (k.endsWith('[]')) {
+          const key = k.replace('[]', '');
+          if (!json[key]) json[key] = [];
+          json[key].push(v);
+        } else {
+          json[k] = v;
+        }
+      });
+
+      try {
+        const res = await fetch('http://localhost:8080/export', { // 改成你的后端地址
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(json)
+        });
+        if (!res.ok) throw new Error('导出失败');
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = '结果.xlsx';
+        link.click();
+      } catch(err) {
+        alert(err.message);
+      }
+    });
+
+    addSqlBlock();
+  </script>
+</body>
+</html>
